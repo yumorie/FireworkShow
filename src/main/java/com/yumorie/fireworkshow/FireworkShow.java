@@ -17,7 +17,7 @@ public final class FireworkShow extends JavaPlugin {
     public void onEnable() {
         try {
             saveDefaultConfig();
-            for(String resource:new String[]{"shows/heart.yml","shows/alternate-heart.yml","images/heart.png"})
+            for(String resource:new String[]{"shows/heart.yml","shows/alternate-heart.yml","shows/multitrack.yml","shows/multi-image.yml","images/heart.png","images/text.png"})
                 if(!new java.io.File(getDataFolder(),resource).exists()) saveResource(resource,false);
             var adapter=new ParticleLibAdapter();
             var steps=StepRegistry.defaults(adapter);

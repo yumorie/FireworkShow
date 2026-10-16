@@ -20,8 +20,9 @@ public final class StepRegistry {
         var registry=new StepRegistry();
         var renderer=new PointCloudRenderer();
         for(String mode:List.of("reveal","hold","scatter")) registry.register(mode,new StepFactory() {
+            public boolean usesImage() { return true; }
             public void validate(ConfigurationSection c) {
-                for(String key:c.getKeys(false)) if(!Set.of("type","duration-ticks","easing","initial-scale","radius-blocks","mode","fade-out").contains(key)) throw new IllegalArgumentException(key+": unknown step field");
+                for(String key:c.getKeys(false)) if(!Set.of("type","duration-ticks","at-tick","transform","image","easing","initial-scale","radius-blocks","mode","fade-out").contains(key)) throw new IllegalArgumentException(key+": unknown step field");
                 Animation.ease(c.getString("easing","linear"),0);
                 number(c,"initial-scale",0.15,0,1); number(c,"radius-blocks",4,0,32);
                 if(!c.getString("mode","center-out").equals("center-out")) throw new IllegalArgumentException("mode: only center-out supported");
@@ -33,10 +34,13 @@ public final class StepRegistry {
         });
         registry.register("particlelib",new StepFactory() {
             public void validate(ConfigurationSection c) {
-                for(String key:c.getKeys(false)) if(!Set.of("type","duration-ticks","effect").contains(key)) throw new IllegalArgumentException(key+": unknown step field");
+                for(String key:c.getKeys(false)) if(!Set.of("type","duration-ticks","at-tick","transform","rotation-policy","effect").contains(key)) throw new IllegalArgumentException(key+": unknown step field");
                 var effect=c.getConfigurationSection("effect");
                 if(effect==null) throw new IllegalArgumentException("effect: missing section");
                 adapter.validate(effect);
+            }
+            public void validateSpatial(ConfigurationSection c,com.yumorie.fireworkshow.spatial.SpatialContext spatial) {
+                adapter.validateSpatial(spatial,c.getString("rotation-policy","origin-only"));
             }
             public ShowStep create(ConfigurationSection c,ShowContext context) {
                 return new ShowStep() {

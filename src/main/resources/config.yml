@@ -4,6 +4,7 @@ display:
   max-particles-per-tick: 1500
   max-active-shows: 6
   max-shows-per-player: 2
+  max-active-clips: 128
 image:
   max-file-bytes: 2097152
   max-width: 512

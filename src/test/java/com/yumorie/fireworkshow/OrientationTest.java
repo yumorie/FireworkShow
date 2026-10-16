@@ -1,12 +1,11 @@
 package com.yumorie.fireworkshow;
-import com.yumorie.fireworkshow.render.PointCloudRenderer;
+import com.yumorie.fireworkshow.spatial.*;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 class OrientationTest {
     @Test void cameraRightMatchesMinecraftYaw() {
-        assertArrayEquals(new double[]{-1,2,0},PointCloudRenderer.offset(1,2,0,0),1e-10);
-        assertArrayEquals(new double[]{0,2,-1},PointCloudRenderer.offset(1,2,0,90),1e-10);
-        assertArrayEquals(new double[]{1,2,0},PointCloudRenderer.offset(1,2,0,180),1e-10);
-        assertArrayEquals(new double[]{0,2,1},PointCloudRenderer.offset(1,2,0,-90),1e-10);
+        for(int i=0;i<4;i++) {
+            float yaw=i*90;double angle=Math.toRadians(yaw);
+            SpatialTest.vector(new Vec3(-Math.cos(angle),2,-Math.sin(angle)),SpatialContext.at(Vec3.ZERO,yaw,Rotation3D.ZERO).imagePoint(1,2,0));
+        }
     }
 }

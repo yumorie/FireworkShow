@@ -9,6 +9,13 @@ import org.bukkit.entity.Player;
 import java.lang.reflect.Field;
 import java.util.*;
 public final class ParticleLibAdapter {
+    public enum SpatialCapability { FULL_3D, ORIGIN_ONLY }
+    /** This API exposes an origin, not a transform hook for all internal emitted points. */
+    public SpatialCapability capability(String effectId) { return SpatialCapability.ORIGIN_ONLY; }
+    public void validateSpatial(com.yumorie.fireworkshow.spatial.SpatialContext spatial,String policy) {
+        if(!Set.of("origin-only","require-full").contains(policy)) throw new IllegalArgumentException("rotation-policy: expected origin-only or require-full");
+        if(spatial.requestsRotation() && policy.equals("require-full")) throw new IllegalArgumentException("ParticleLib supports ORIGIN_ONLY; full shape rotation requested but unsupported");
+    }
     private final ParticleLibAPI api;
     public ParticleLibAdapter() {
         var registration=Bukkit.getServicesManager().getRegistration(ParticleLibAPI.class);

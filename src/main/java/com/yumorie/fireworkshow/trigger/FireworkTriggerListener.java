@@ -16,7 +16,7 @@ public final class FireworkTriggerListener implements Listener {
         if(!shows.snapshot().shows().containsKey(id)) { plugin.getLogger().warning("Tagged rocket references missing show: "+id+"; vanilla fallback");return; }
         try {
             Player focus=rocket.getShooter() instanceof Player p && p.isOnline()?p:null;
-            shows.play(id,rocket.getLocation().clone(),focus,false);
+            shows.play(id,rocket.getLocation().clone(),focus,false,items.rotation(rocket.getItem()));
             event.setCancelled(true);
         } catch(RuntimeException e) { plugin.getLogger().warning("Rocket show "+id+" rejected; vanilla fallback: "+e.getMessage()); }
     }

@@ -28,7 +28,7 @@ class ParticleLibTest {
         var registry=StepRegistry.defaults(adapter());
         var loaded=new ShowLoader(registry).load(root);
         assertEquals(2,loaded.shows().size());
-        var step=new YamlConfiguration();step.loadFromString(loaded.shows().get("heart").steps().getFirst().yaml());
+        var step=new YamlConfiguration();step.loadFromString(loaded.shows().get("heart").tracks().getFirst().clips().getFirst().step().yaml());
         assertEquals("tornado",step.getConfigurationSection("effect").getString("class"));
         step.set("effect.height",9);
         assertThrows(IllegalArgumentException.class,()->registry.factory("particlelib").validate(step));
@@ -44,5 +44,14 @@ class ParticleLibTest {
     }
     @Test void renderBudgetRejectsOverruns() {
         var b=new RenderBudget();b.reset(10);assertTrue(b.take(6));assertFalse(b.take(5));assertEquals(4,b.remaining());
+    }
+    @Test void libraryCapabilitiesDoNotPretendToRotateInternalShapes() {
+        var bridge=adapter();
+        var zero=com.yumorie.fireworkshow.spatial.SpatialContext.at(com.yumorie.fireworkshow.spatial.Vec3.ZERO,90,com.yumorie.fireworkshow.spatial.Rotation3D.ZERO);
+        var rotated=zero.child(new com.yumorie.fireworkshow.spatial.Rotation3D(90,0,0).transform());
+        assertEquals(ParticleLibAdapter.SpatialCapability.ORIGIN_ONLY,bridge.capability("tornado"));
+        assertDoesNotThrow(()->bridge.validateSpatial(zero,"require-full"));
+        assertDoesNotThrow(()->bridge.validateSpatial(rotated,"origin-only"));
+        assertThrows(IllegalArgumentException.class,()->bridge.validateSpatial(rotated,"require-full"));
     }
 }

@@ -17,7 +17,7 @@ public final class ShowCommand implements CommandExecutor,TabCompleter {
         if(!sender.hasPermission(permission)) { sender.sendMessage("缺少权限: "+permission);return true; }
         try {
             switch(sub) {
-                case "help" -> sender.sendMessage("/fws list | preview <showId> | give <player> <showId> [1..64] | reload | stop (本人全部预览) | stopall | info");
+                case "help" -> sender.sendMessage("/fws list | preview <showId> | give <player> <showId> [1..64] [rotation=x,y,z] | reload | stop (本人全部预览) | stopall | info");
                 case "list" -> sender.sendMessage("演出: "+String.join(", ",new TreeSet<>(shows.snapshot().shows().keySet())));
                 case "preview" -> {
                     if(!(sender instanceof Player player)) throw new IllegalArgumentException("preview 只能由玩家执行: /fws preview <showId>");
@@ -26,17 +26,18 @@ public final class ShowCommand implements CommandExecutor,TabCompleter {
                     var direction=player.getEyeLocation().getDirection();
                     var origin=player.getEyeLocation().add(direction.multiply(settings.previewDistance())).add(0,settings.previewHeight(),0);
                     if(origin.getY()<=origin.getWorld().getMinHeight() || origin.getY()>=origin.getWorld().getMaxHeight() || !origin.getBlock().isPassable()) throw new IllegalArgumentException("预览位置受阻，请面向空旷天空");
-                    shows.play(args[1],origin,player,true);sender.sendMessage("开始预览 "+args[1]);
+                    shows.play(args[1],origin,player,true,com.yumorie.fireworkshow.spatial.Rotation3D.ZERO);sender.sendMessage("开始预览 "+args[1]);
                 }
                 case "give" -> {
-                    if(args.length<3 || args.length>4) throw new IllegalArgumentException("/fws give <player> <showId> [1..64]");
+                    if(args.length<3) throw new IllegalArgumentException("/fws give <player> <showId> [1..64] [rotation=x,y,z]");
+                    var options=GiveOptions.parse(Arrays.copyOfRange(args,3,args.length));
                     var target=Bukkit.getPlayerExact(args[1]);
                     if(target==null) throw new IllegalArgumentException("玩家不在线");
                     var definition=shows.snapshot().shows().get(args[2]);
                     if(definition==null) throw new IllegalArgumentException("未知演出: "+args[2]);
-                    int amount=args.length==4?Integer.parseInt(args[3]):1;
-                    if(amount<1 || amount>64) throw new IllegalArgumentException("数量必须为 1..64");
-                    var remaining=target.getInventory().addItem(items.create(definition,amount));
+                    int amount=options.amount();
+                    shows.validateRotation(definition,options.rotation());
+                    var remaining=target.getInventory().addItem(items.create(definition,amount,options.rotation()));
                     remaining.values().forEach(item->target.getWorld().dropItemNaturally(target.getLocation(),item));
                     sender.sendMessage("已发放 "+amount+" 个烟花；背包剩余物品会掉落在玩家脚下");
                 }
@@ -58,6 +59,10 @@ public final class ShowCommand implements CommandExecutor,TabCompleter {
         if(args.length==1 && sender.hasPermission("fireworkshow.use")) { options.addAll(List.of("help","list"));if(admin) options.addAll(List.of("preview","give","reload","stop","stopall","info")); }
         if(admin && args.length==2 && args[0].equalsIgnoreCase("preview") || admin && args.length==3 && args[0].equalsIgnoreCase("give")) options.addAll(shows.snapshot().shows().keySet());
         if(admin && args.length==2 && args[0].equalsIgnoreCase("give")) Bukkit.getOnlinePlayers().forEach(p->options.add(p.getName()));
+        if(admin && args.length>0 && args[0].equalsIgnoreCase("give") && (args.length==4 || args.length==5 && !args[3].startsWith("rotation="))) {
+            options.addAll(List.of("rotation=0,0,0","rotation=90,0,0"));
+            if(args.length==4) options.addAll(List.of("1","16","64"));
+        }
         String prefix=args.length==0?"":args[args.length-1].toLowerCase(Locale.ROOT);
         return options.stream().filter(s->s.toLowerCase(Locale.ROOT).startsWith(prefix)).sorted().toList();
     }
