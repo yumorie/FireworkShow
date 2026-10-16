@@ -48,22 +48,35 @@ tracks:
     transform:
       position: {x: 0, y: 1, z: 0}
       rotation: {x: 0, y: 0, z: 15}
+      scale: 1.5
     clips:
       - at-tick: 0
         type: reveal
         image: heart
         duration-ticks: 40
         easing: ease-out-cubic
+        transform:
+          position: {x: 0, y: 1, z: 0}
+          rotation: {x: 0, y: 0, z: 30}
+          scale: 0.8
       - at-tick: 40
         type: hold
         image: heart
         duration-ticks: 40
+        transform:
+          position: {x: 0, y: 1, z: 0}
+          rotation: {x: 0, y: 0, z: 30}
+          scale: 0.8
       - at-tick: 80
         type: scatter
         image: heart
         duration-ticks: 50
         radius-blocks: 4
         fade-out: true
+        transform:
+          position: {x: 0, y: 1, z: 0}
+          rotation: {x: 0, y: 0, z: 30}
+          scale: 0.8
 ```
 
 - reveal：从中心向外出现；initial-scale 默认 0.15。
@@ -81,6 +94,8 @@ tracks:
 
 使用右手正交坐标系，角度为度。单级旋转依次应用 X → Y → Z，矩阵为 Rz*Ry*Rx。层级为世界原点/观察方向 → 烟花全局旋转 → Track → Clip → 图片本地坐标。父旋转影响子位移，不对欧拉角直接求和。
 
+Track 和 Clip 都支持 `transform.scale`，默认 1，单级范围 **0.05..20**，仅接受有限正数。变换为 `s·R·p+t`：本层 position 不受自身 scale 影响，子级相对位移会受父级缩放影响。父子缩放相乘，例如 1.5×0.8=1.2；PNG 点云和缓存不变。图片的形成、保持和扩散都通过同一空间变换，dust-size 仍由图片配置独立控制。
+
 默认根 yaw=0 时，图片右轴、上轴、朝观察者的法线分别为 -X、+Y、-Z。face-trigger 根据观察者到演出原点的水平观察方向固定朝向；fixed 使用顶层 yaw，无玩家时也使用该 yaw。`rotation=90,0,0` 将图片转入水平面。
 
 透明像素不显示，保留原 RGB 和宽高比。DUST 没有真实 alpha，半透明和淡出通过稳定密度模拟。相同路径、宽度、阈值和点数配置共享不可变点云；不同图片和 Clip 的动画状态独立。PNG 不在每帧重新读取。
@@ -91,9 +106,15 @@ tracks:
 
 错误图片、引用或 YAML 会拒绝整次 reload，保留当前快照，已有演出继续使用原快照。加载为有界同步操作，较多资源可能短暂阻塞主线程。拒绝目录越界、URL、越界符号链接、重复名称和非有限数值。
 
-ParticleLib 仅支持 ORIGIN_ONLY：发射位置经过变换，内部形状方向由库决定。默认 rotation-policy: origin-only 遇到旋转会警告；require-full 会拒绝。龙卷风采用保守几何预算，其他库算法只能估算，需同时设置库自身性能限制。
+ParticleLib 仅支持 ORIGIN_ONLY：发射位置经过变换，内部形状由库决定。有效旋转或缩放在默认 rotation-policy: origin-only 下会警告，在 require-full 下会拒绝。龙卷风采用保守几何预算，其他库算法只能估算，需同时设置库自身性能限制。
+
+ParticleLib 内部形状大小应使用该效果自己的参数，例如 tornadoHeight、maxTornadoRadius；transform.scale 不会代替这些参数。
 
 特殊火箭保存 show_id 和 rotation PDC；缺失或损坏 rotation 的带标记物品会报错并保留原版爆炸行为。普通火箭不受影响。stop 停止后续发射，客户端可能有短暂粒子残影。仅支持常规 Paper 主线程模型。
+
+新生成火箭的 Lore 显示实际 PDC 中的角度，例如 `Rotation: X=90°, Y=0°, Z=15.125°`。省略旋转时显示三个 0，保留有效小数。
+
+文字资源为两行 `MCZJU` / `MMGA`，107×62 RGBA、透明背景、粗像素字模和青蓝到淡紫渐变。可在项目根目录运行 `java tools/GenerateText.java` 重新生成。若测试服已经释放过图片，需手动替换其 `plugins/FireworkShow/images/text.png`，并同步需要的 shows 配置，再执行 `/fws reload`；默认资源释放不会覆盖这些文件。
 
 ## 验证
 

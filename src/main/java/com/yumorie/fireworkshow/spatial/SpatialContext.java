@@ -9,9 +9,11 @@ public record SpatialContext(Transform3D world, Transform3D requested) {
         return new SpatialContext(base.child(rotation),rotation);
     }
     public SpatialContext child(Transform3D local) {
-        return new SpatialContext(world.child(local),requested.child(local).rotationOnly());
+        return new SpatialContext(world.child(local),requested.child(local).linearOnly());
     }
     public Vec3 apply(Vec3 point) { return world.apply(point); }
     public boolean requestsRotation() { return requested.hasRotation(); }
+    public boolean requestsScale() { return requested.hasScale(); }
+    public boolean requestsShapeTransform() { return requestsRotation() || requestsScale(); }
     public Vec3 imagePoint(double x,double y,double z) { return apply(new Vec3(x,y,z)); }
 }

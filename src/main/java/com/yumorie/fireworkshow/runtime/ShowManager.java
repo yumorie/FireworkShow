@@ -60,7 +60,7 @@ public final class ShowManager {
             try { c.loadFromString(d.yaml()); } catch(Exception e) { throw new IllegalStateException("Invalid validated step",e); }
             var child=spatial.child(track.transform()).child(clip.transform());
             var factory=steps.factory(d.type());factory.validateSpatial(c,child);
-            if(d.type().equals("particlelib") && child.requestsRotation()) plugin.getLogger().warning("Show "+id+" clip "+track.id()+"/"+index+": ParticleLib ORIGIN_ONLY; position transformed, internal shape rotation is not supported");
+            if(d.type().equals("particlelib") && child.requestsShapeTransform()) plugin.getLogger().warning("Show "+id+" clip "+track.id()+"/"+index+": ParticleLib ORIGIN_ONLY; position transformed, internal shape rotation/scale is not supported");
             long seed=ShowContext.imageSeed(context.seed,clip.image());
             var clipContext=new ShowContext(def,settings,origin,owner,budget,adapter,clip.image(),child,seed);
             contexts.add(clipContext);

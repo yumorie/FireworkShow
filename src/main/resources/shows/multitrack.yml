@@ -11,8 +11,8 @@ images:
     dust-size: 0.9
   text:
     file: text.png
-    width-blocks: 5
-    max-points: 300
+    width-blocks: 8
+    max-points: 600
     alpha-threshold: 16
     dust-size: 0.8
 tracks:
@@ -56,7 +56,7 @@ tracks:
         easing: ease-in-cubic
   text:
     transform:
-      position: {x: 3, y: 2, z: 0}
+      position: {x: 4.5, y: 2.5, z: 0}
       rotation: {x: 0, y: 0, z: -8}
     clips:
       - at-tick: 20

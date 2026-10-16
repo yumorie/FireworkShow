@@ -9,6 +9,7 @@ import java.util.List;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import com.yumorie.fireworkshow.spatial.Rotation3D;
+import java.math.BigDecimal;
 public final class FireworkItems {
     private final NamespacedKey key;
     public FireworkItems(Plugin plugin) { key=new NamespacedKey(plugin,"show_id"); }
@@ -17,9 +18,9 @@ public final class FireworkItems {
         var meta=(FireworkMeta)item.getItemMeta();
         meta.clearEffects();meta.setPower(1);
         meta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(show.displayName()));
-        meta.lore(List.of(Component.text("FireworkShow: "+show.id()),Component.text("Launch to play the particle show")));
         meta.getPersistentDataContainer().set(key,PersistentDataType.STRING,show.id());
         RocketRotation.write(meta.getPersistentDataContainer(),rotation);
+        meta.lore(lore(show.id(),RocketRotation.read(meta.getPersistentDataContainer())));
         item.setItemMeta(meta);return item;
     }
     public String id(ItemStack item) {
@@ -28,4 +29,10 @@ public final class FireworkItems {
     public Rotation3D rotation(ItemStack item) {
         return RocketRotation.read(item.getItemMeta().getPersistentDataContainer());
     }
+    public static List<Component> lore(String showId,Rotation3D rotation) {
+        return List.of(Component.text("FireworkShow: "+showId),
+                Component.text("Rotation: X="+angle(rotation.x())+"°, Y="+angle(rotation.y())+"°, Z="+angle(rotation.z())+"°"),
+                Component.text("Launch to play the particle show"));
+    }
+    private static String angle(double degrees) { return BigDecimal.valueOf(degrees).stripTrailingZeros().toPlainString(); }
 }

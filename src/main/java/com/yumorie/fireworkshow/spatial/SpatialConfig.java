@@ -9,10 +9,11 @@ public final class SpatialConfig {
         if(!config.contains("transform")) return Transform3D.IDENTITY;
         var transform=config.getConfigurationSection("transform");
         if(transform==null) throw new IllegalArgumentException("transform: expected mapping");
-        for(String key:transform.getKeys(false)) if(!Set.of("position","rotation").contains(key)) throw new IllegalArgumentException("transform."+key+": unknown field");
+        for(String key:transform.getKeys(false)) if(!Set.of("position","rotation","scale").contains(key)) throw new IllegalArgumentException("transform."+key+": unknown field");
         double[] p=vector(transform,"position"), r=vector(transform,"rotation");
         for(double n:p) if(Math.abs(n)>128) throw new IllegalArgumentException("transform.position: maximum absolute offset 128");
-        return Transform3D.of(new Vec3(p[0],p[1],p[2]),new Rotation3D(r[0],r[1],r[2]));
+        double scale=com.yumorie.fireworkshow.config.Values.number(transform,"scale",1,Transform3D.MIN_SCALE,Transform3D.MAX_SCALE);
+        return Transform3D.of(new Vec3(p[0],p[1],p[2]),new Rotation3D(r[0],r[1],r[2]),scale);
     }
     private static double[] vector(ConfigurationSection section,String key) {
         if(!section.contains(key)) return new double[3];

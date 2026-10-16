@@ -8,7 +8,7 @@ images:
     dust-size: 0.9
   text:
     file: text.png
-    width-blocks: 6
+    width-blocks: 9.5
     max-points: 600
     dust-size: 0.8
 tracks:
