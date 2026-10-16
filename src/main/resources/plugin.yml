@@ -1,0 +1,12 @@
+name: FireworkShow
+description: $description
+version: '${version}'
+
+main: com.yumorie.fireworkshow.FireworkShow
+api-version: '26.2'
+load: POSTWORLD
+
+authors: [ yumorie ]
+
+depend:
+  - ParticleLib
