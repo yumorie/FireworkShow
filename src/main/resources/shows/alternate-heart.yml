@@ -1,0 +1,17 @@
+id: alternate-heart
+display-name: '&bSlow Heart'
+image:
+  file: heart.png
+  width-blocks: 5.0
+  max-points: 600
+timeline:
+  - type: reveal
+    duration-ticks: 80
+    initial-scale: 0.05
+    easing: linear
+  - type: hold
+    duration-ticks: 60
+  - type: scatter
+    duration-ticks: 80
+    radius-blocks: 6
+    easing: ease-out-cubic

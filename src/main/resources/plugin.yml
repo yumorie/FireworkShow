@@ -1,5 +1,5 @@
 name: FireworkShow
-description: $description
+description: Configurable ParticleLib and transparent PNG firework shows
 version: '${version}'
 
 main: com.yumorie.fireworkshow.FireworkShow
@@ -10,3 +10,16 @@ authors: [ yumorie ]
 
 depend:
   - ParticleLib
+
+commands:
+  fws:
+    description: Manage firework shows
+    aliases: [fireworkshow]
+    usage: /fws help
+permissions:
+  fireworkshow.use:
+    default: true
+  fireworkshow.admin:
+    default: op
+    children:
+      fireworkshow.use: true

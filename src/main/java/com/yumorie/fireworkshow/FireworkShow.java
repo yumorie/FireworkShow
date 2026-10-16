@@ -1,18 +1,42 @@
 package com.yumorie.fireworkshow;
 
-import me.sunmc.particlelib.ParticleLib;
+import com.yumorie.fireworkshow.config.ShowLoader;
+import com.yumorie.fireworkshow.integration.particlelib.ParticleLibAdapter;
+import com.yumorie.fireworkshow.runtime.ShowManager;
+import com.yumorie.fireworkshow.step.StepRegistry;
+import com.yumorie.fireworkshow.trigger.*;
+import com.yumorie.fireworkshow.command.ShowCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class FireworkShow extends JavaPlugin {
+    private ShowManager manager;
+    private ShowLoader loader;
+    public void reloadShows() throws Exception { manager.replace(loader.load(getDataFolder().toPath())); }
 
     @Override
     public void onEnable() {
-        // Plugin startup logic
-
+        try {
+            saveDefaultConfig();
+            for(String resource:new String[]{"shows/heart.yml","shows/alternate-heart.yml","images/heart.png"})
+                if(!new java.io.File(getDataFolder(),resource).exists()) saveResource(resource,false);
+            var adapter=new ParticleLibAdapter();
+            var steps=StepRegistry.defaults(adapter);
+            loader=new ShowLoader(steps);
+            manager=new ShowManager(this,steps,adapter,loader.load(getDataFolder().toPath()));
+            var items=new FireworkItems(this);
+            var commands=new ShowCommand(this,manager,items);
+            var command=java.util.Objects.requireNonNull(getCommand("fws"));
+            command.setExecutor(commands);command.setTabCompleter(commands);
+            getServer().getPluginManager().registerEvents(new FireworkTriggerListener(manager,items,this),this);
+            getLogger().info("Loaded "+manager.snapshot().shows().size()+" shows; ParticleLib API available");
+        } catch(Exception | LinkageError e) {
+            getLogger().log(java.util.logging.Level.SEVERE,"FireworkShow startup failed; verify configuration and ParticleLib v0.1-alpha compatibility",e);
+            getServer().getPluginManager().disablePlugin(this);
+        }
     }
 
     @Override
     public void onDisable() {
-        // Plugin shutdown logic
+        if(manager!=null) manager.close();
     }
 }

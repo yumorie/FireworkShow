@@ -1,0 +1,17 @@
+display:
+  frame-period-ticks: 2
+  view-distance-blocks: 48
+  max-particles-per-tick: 1500
+  max-active-shows: 6
+  max-shows-per-player: 2
+image:
+  max-file-bytes: 2097152
+  max-width: 512
+  max-height: 512
+  max-pixels: 262144
+  max-points: 700
+  default-alpha-threshold: 16
+  default-dust-size: 0.9
+preview:
+  distance-blocks: 8.0
+  height-offset-blocks: 1.0
