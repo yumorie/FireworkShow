@@ -24,7 +24,7 @@ public final class ShowManager {
         task=Bukkit.getScheduler().runTaskTimer(plugin,this::tick,1,1);
     }
     public ShowLoader.Snapshot snapshot() { return snapshot; }
-    public void replace(ShowLoader.Snapshot next) { snapshot=next; }
+    public void replace(ShowLoader.Snapshot next) { if(snapshot.settings().unsafeFullFrame()&&!next.settings().unsafeFullFrame()) stop(null);snapshot=next; }
     public int active() { return sessions.size(); }
     public void validateRotation(ShowDefinition definition,Rotation3D rotation) {
         var root=SpatialContext.at(Vec3.ZERO,0,rotation);
@@ -51,6 +51,13 @@ public final class ShowManager {
             origin.setYaw((float)Math.toDegrees(Math.atan2(-delta.getX(),delta.getZ())));
         }
         var spatial=SpatialContext.at(new Vec3(origin.getX(),origin.getY(),origin.getZ()),origin.getYaw(),rotation);
+        int viewerCount=origin.getWorld().getPlayers().stream().filter(p->p.isOnline()&&p.getLocation().distanceSquared(origin)<=settings.viewDistance()*settings.viewDistance()).toList().size();
+        for(var image:def.images().values()) {
+            long cost=(long)image.cloud().points().size()*viewerCount;
+            plugin.getLogger().warning("RAW PIXEL play "+id+" source="+image.source().getFileName()+" points="+image.cloud().points().size()+" viewers="+viewerCount+" DUST/frame="+cost+" sufficient="+(cost<=settings.budget()));
+            if(cost>settings.budget()&&!settings.unsafeFullFrame()) throw new IllegalArgumentException("RAW PIXEL show rejected: full image requires "+cost+" sends/frame for "+viewerCount+" viewers; budget="+settings.budget()+". No show started.");
+        }
+        if(settings.unsafeFullFrame()) plugin.getLogger().severe("HIGH RISK raw full-frame playback: "+id+"; normal particle budget may be bypassed. Clients/server may freeze.");
         var context=new ShowContext(def,settings,origin,owner,budget,adapter,null,spatial,UUID.randomUUID().getMostSignificantBits());
         var contexts=new ArrayList<ShowContext>();
         var clips=new ArrayList<TimelineEngine.ScheduledClip>();
@@ -63,6 +70,7 @@ public final class ShowManager {
             if(d.type().equals("particlelib") && child.requestsShapeTransform()) plugin.getLogger().warning("Show "+id+" clip "+track.id()+"/"+index+": ParticleLib ORIGIN_ONLY; position transformed, internal shape rotation/scale is not supported");
             long seed=ShowContext.imageSeed(context.seed,clip.image());
             var clipContext=new ShowContext(def,settings,origin,owner,budget,adapter,clip.image(),child,seed,clip.sampledImage());
+            clipContext.diagnostics=plugin.getLogger()::warning;
             contexts.add(clipContext);
             clips.add(new TimelineEngine.ScheduledClip(track.id()+"/"+index,clip.atTick(),d.duration(),factory.create(c,clipContext)));
         }
@@ -80,6 +88,7 @@ public final class ShowManager {
                 else { s.engine.tick();s.context.tick++;for(var clip:s.clips) clip.tick++; }
             } catch(RuntimeException e) {
                 plugin.getLogger().log(java.util.logging.Level.SEVERE,"Show "+s.context.definition.id()+" stopped after playback error",e);
+                if(s.context.owner!=null) { var player=Bukkit.getPlayer(s.context.owner);if(player!=null)player.sendMessage("FireworkShow: "+e.getMessage()); }
                 try { s.engine.stop(); } catch(RuntimeException cleanup) { plugin.getLogger().log(java.util.logging.Level.SEVERE,"Effect cleanup failed",cleanup); }
             }
             if(s.engine.done()) it.remove();

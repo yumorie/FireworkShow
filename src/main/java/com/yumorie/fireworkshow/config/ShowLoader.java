@@ -13,8 +13,8 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
 import static com.yumorie.fireworkshow.config.Values.*;
 
 public final class ShowLoader {
-    public record Snapshot(Settings settings,Map<String,ShowDefinition> shows,ImageAssetService.Stats preprocessing) {
-        public Snapshot { shows=Map.copyOf(shows); }
+    public record Snapshot(Settings settings,Map<String,ShowDefinition> shows,ImageAssetService.Stats preprocessing,List<String> diagnostics) {
+        public Snapshot { shows=Map.copyOf(shows);diagnostics=List.copyOf(diagnostics); }
         public int cachedClouds() { return preprocessing.variants(); }
     }
     private final StepRegistry steps;
@@ -39,7 +39,13 @@ public final class ShowLoader {
                 } catch(Exception error) { errors.add(file.getFileName()+": "+error.getMessage()); }
             }
         if(!errors.isEmpty()) throw new IllegalArgumentException("Reload rejected ("+errors.size()+" errors); old snapshot retained:\n"+String.join("\n",errors));
-        return new Snapshot(settings,shows,assets.stats());
+        var diagnostics=new ArrayList<String>();
+        for(var show:shows.values())for(var entry:show.images().entrySet()) {
+            var image=entry.getValue();var info=assets.metadata(image.source(),settings.imageLimits());
+            int count=image.cloud().points().size();
+            diagnostics.add("RAW PIXEL "+show.id()+"/"+entry.getKey()+" source="+info.width()+"x"+info.height()+" alphaThreshold="+image.sampling().alpha()+" effectivePixels="+count+" cloudPoints="+count+" DUST/frame/viewer="+count+" budget="+settings.budget()+" sufficientOneViewer="+(count<=settings.budget())+"; max-points / particle-spacing / final-size sampling IGNORED");
+        }
+        return new Snapshot(settings,shows,assets.stats(),diagnostics);
         }
     }
     private ShowDefinition definition(Path root,YamlConfiguration yaml,Settings settings,ImageAssetService assets,String id) throws Exception {
@@ -102,14 +108,14 @@ public final class ShowLoader {
         Path path=ImageAssetService.resolve(root.resolve("images"),image.getString("file",""));
         double width=number(image,"width-blocks",5,0.1,32);
         int alpha=integer(image,"alpha-threshold",settings.alpha(),0,255);
-        int max=integer(image,"max-points",settings.maxPoints(),1,settings.maxPoints());
+        int max=1; // Legacy max-points is ignored by this experiment, including its value.
         float dust=(float)number(image,"dust-size",settings.dust(),0.01,4);
-        double spacing=number(image,"particle-spacing",0.12,0.02,2),brightness=number(image,"brightness",1,0.1,3);
+        double spacing=0.12,brightness=number(image,"brightness",1,0.1,3); // spacing ignored
         if(image.contains("glow")&&!image.isConfigurationSection("glow")) throw new IllegalArgumentException("glow: expected mapping");
         if(image.contains("glow.enabled")&&!image.isBoolean("glow.enabled")) throw new IllegalArgumentException("glow.enabled: expected boolean");
         var glow=new GlowDefinition(image.getBoolean("glow.enabled",false),number(image,"glow.density",0.03,0,0.1));
-        var request=new SamplingRequest(width,1,spacing,alpha,Math.min(max,settings.budget()),brightness);
-        return new ImageDefinition(assets.sample(path,settings.imageLimits(),request),dust,path,request,glow);
+        var request=new SamplingRequest(width,1,spacing,alpha,max,brightness);
+        return new ImageDefinition(assets.loadRaw(path,settings.imageLimits(),request),dust,path,request,glow);
     }
     private static ConfigurationSection requiredSection(ConfigurationSection parent,String key) {
         var section=parent.getConfigurationSection(key);

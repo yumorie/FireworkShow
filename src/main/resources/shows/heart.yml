@@ -1,5 +1,5 @@
 # UTF-8 中文配置。游戏 tick 按服务器时钟计算；20 TPS 时 20 tick 约为 1 秒。
-# 图片按最终世界尺寸采样：width-blocks × 累计 scale；旋转不改变采样密度。所有轨道共用预算。
+# 原始像素实验：max-points 和 particle-spacing 忽略；Track/Clip scale 只改变坐标，不改变点数。
 # 字符串，必填且唯一；1～64 个小写字母、数字、下划线或短横线，无单位。
 id: heart
 # 字符串，默认使用 id；物品显示名称，支持 & 颜色代码，无单位。
@@ -10,11 +10,11 @@ images:
   heart:
     # 字符串，必填；images/ 下的简单 PNG 文件名；拒绝 URL、路径穿越和越界符号链接。
     file: heart.png
-    # 有限数值，默认 5，范围 0.1～32，单位方块；最终采样宽度 = 此值 × Track.scale × Clip.scale。
+    # 有限数值，默认 5，范围 0.1～32，单位方块；最终显示宽度 = 此值 × Track.scale × Clip.scale，不影响点数。
     width-blocks: 5.0
-    # 整数，默认 16，范围 0～255；过滤贡献墨迹的低 alpha，完全透明区域始终没有粒子。
+    # 整数，默认 16，范围 0～255；逐像素过滤低 alpha，完全透明区域始终没有粒子。
     alpha-threshold: 16
-    # 整数，默认全局 image.max-points（700），范围 1～该全局值；再与发送预算取较小值，实际点数还取决于有效尺寸和内容。
+    # 旧 max-points 字段：实验版忽略，不截断；完整图案预算不足时明确拒绝。
     max-points: 600
     # 有限数值，默认全局 default-dust-size（0.9），范围 0.01～4；DUST 大小参数，不随空间 scale 自动改变。
     dust-size: 0.9
@@ -54,7 +54,7 @@ tracks:
       - at-tick: 30
         # 字符串，必填；reveal（形成）、hold（保持）、scatter（扩散）或 particlelib（库效果），需在 StepRegistry 注册。
         type: reveal
-        # 字符串，图片阶段必填；精确引用 images 中的资源名称，同一尺寸的形成/保持/扩散复用同一采样点云。
+        # 字符串，图片阶段必填；精确引用 images 中的资源名称，所有阶段和不同 scale 共用完整原始点云。
         image: heart
         # 正整数，必填，范围 1～12000，单位游戏 tick；at-tick + duration-ticks 不得超过 24000。
         duration-ticks: 40
@@ -68,7 +68,7 @@ tracks:
       - at-tick: 70
         # 字符串，必填；reveal（形成）、hold（保持）、scatter（扩散）或 particlelib（库效果），需在 StepRegistry 注册。
         type: hold
-        # 字符串，图片阶段必填；精确引用 images 中的资源名称，同一尺寸的形成/保持/扩散复用同一采样点云。
+        # 字符串，图片阶段必填；精确引用 images 中的资源名称，所有阶段和不同 scale 共用完整原始点云。
         image: heart
         # 正整数，必填，范围 1～12000，单位游戏 tick；at-tick + duration-ticks 不得超过 24000。
         duration-ticks: 40
@@ -76,7 +76,7 @@ tracks:
       - at-tick: 110
         # 字符串，必填；reveal（形成）、hold（保持）、scatter（扩散）或 particlelib（库效果），需在 StepRegistry 注册。
         type: scatter
-        # 字符串，图片阶段必填；精确引用 images 中的资源名称，同一尺寸的形成/保持/扩散复用同一采样点云。
+        # 字符串，图片阶段必填；精确引用 images 中的资源名称，所有阶段和不同 scale 共用完整原始点云。
         image: heart
         # 正整数，必填，范围 1～12000，单位游戏 tick；at-tick + duration-ticks 不得超过 24000。
         duration-ticks: 50

@@ -17,26 +17,26 @@ class WorldSamplingTest {
         for(int y=0;y<height;y++)for(int x=0;x<width;x++)image.setRGB(x,y,color);
         Path file=root.resolve(name);ImageIO.write(image,"PNG",file.toFile());return file;
     }
-    @Test void resolutionDoesNotDeterminePointCountAndScaleDoes() throws Exception {
-        var a=solid("a.png",1024,1024,0xff204060);var b=solid("b.png",2048,2048,0xff204060);
+    @Test void rawResolutionDeterminesPointCountButScaleDoesNot() throws Exception {
+        var a=solid("a.png",128,128,0xff204060);var b=solid("b.png",256,256,0xff204060);
         try(var assets=new ImageAssetService()) {
-            var small=assets.sample(a,limits,request(8,.5));
-            var high=assets.sample(b,limits,request(4,1));
-            var large=assets.sample(a,limits,request(8,1));
-            assertEquals(400,small.points().size());assertEquals(400,high.points().size());assertEquals(1600,large.points().size());
+            var small=assets.loadRaw(a,limits,request(8,.5));
+            var high=assets.loadRaw(b,limits,request(4,1));
+            var large=assets.loadRaw(a,limits,request(8,1));
+            assertEquals(16384,small.points().size());assertEquals(65536,high.points().size());assertSame(small,large);
             assertTrue(small.points().stream().allMatch(p->p.rgb()==0x204060));
         }
     }
     @Test void cacheHitsDoNotDecodeAndClosingReleasesSource() throws Exception {
         var file=solid("a.png",64,32,0xff123456);var assets=new ImageAssetService();
-        var cloud=assets.sample(file,limits,request(4,1));
-        for(int tick=0;tick<100;tick++)assertSame(cloud,assets.sample(file,limits,request(4,1)));
+        var cloud=assets.loadRaw(file,limits,request(4,1));
+        for(int tick=0;tick<100;tick++)assertSame(cloud,assets.loadRaw(file,limits,request(4,1)));
         assertEquals(1,assets.stats().decodes());assertEquals(1,assets.stats().variants());assertTrue(assets.retainsDecodedImage());
-        assertEquals(200,cloud.points().size());
+        assertEquals(2048,cloud.points().size());
         double maxX=cloud.points().stream().mapToDouble(p->Math.abs(p.x())).max().orElseThrow();
         double maxY=cloud.points().stream().mapToDouble(p->Math.abs(p.y())).max().orElseThrow();
-        assertEquals(1.9,maxX,1e-9);assertEquals(.9,maxY,1e-9);
-        assets.close();assertFalse(assets.retainsDecodedImage());assertThrows(IllegalStateException.class,()->assets.sample(file,limits,request(4,1)));
+        assertEquals(1.96875,maxX,1e-9);assertEquals(.96875,maxY,1e-9);
+        assets.close();assertFalse(assets.retainsDecodedImage());assertThrows(IllegalStateException.class,()->assets.loadRaw(file,limits,request(4,1)));
     }
     @Test void transparentPaddingCannotPolluteThinColoredStrokes() {
         var image=new BufferedImage(100,100,BufferedImage.TYPE_INT_ARGB);
@@ -63,17 +63,17 @@ class WorldSamplingTest {
     @Test void headerAndWorkLimitsRejectBeforeUnboundedProcessing() throws Exception {
         var file=solid("a.png",64,64,0xff123456);
         try(var assets=new ImageAssetService()) {
-            assertThrows(Exception.class,()->assets.sample(file,new ImageAssetService.Limits(1,4096,4096,4194304),request(4,1)));
-            assertThrows(Exception.class,()->assets.sample(file,new ImageAssetService.Limits(16777216,32,32,4194304),request(4,1)));
+            assertThrows(Exception.class,()->assets.loadRaw(file,new ImageAssetService.Limits(1,4096,4096,4194304),request(4,1)));
+            assertThrows(Exception.class,()->assets.loadRaw(file,new ImageAssetService.Limits(16777216,32,32,4194304),request(4,1)));
             assertEquals(0,assets.stats().decodes());
-            assertThrows(IllegalArgumentException.class,()->assets.sample(file,limits,request(10000,1)));
+            assertEquals(4096,assets.loadRaw(file,limits,request(10000,1)).points().size()); // no grids
         }
         var tiny=new ImageAssetService.PreprocessLimits(1,10000,100000,10000,1,5000,1,10000);
-        try(var assets=new ImageAssetService(tiny)) { assertThrows(Exception.class,()->assets.sample(file,limits,request(4,1)));assertEquals(0,assets.stats().decodes()); }
+        try(var assets=new ImageAssetService(tiny)) { assertThrows(Exception.class,()->assets.loadRaw(file,limits,request(4,1)));assertEquals(0,assets.stats().decodes()); }
         var bounded=new ImageAssetService.PreprocessLimits(100000,10000,100000,10000,1,5000,1,10000);
         try(var assets=new ImageAssetService(bounded)) {
-            assets.sample(file,limits,request(4,1));
-            assertTrue(assertThrows(IllegalArgumentException.class,()->assets.sample(file,limits,request(8,1))).getMessage().contains("max-sampling-variants"));
+            assets.loadRaw(file,limits,request(4,1));
+            assertTrue(assertThrows(IllegalArgumentException.class,()->assets.loadRaw(file,limits,request(9,1))).getMessage().contains("max-sampling-variants"));
         }
     }
     @Test void samplingParametersRejectNonFiniteAndOutOfRangeValues() {
@@ -84,12 +84,12 @@ class WorldSamplingTest {
         var file=solid("a.png",64,64,0xff123456);
         var work=new ImageAssetService.PreprocessLimits(100000,10000,1,10000,10,5000,1,10000);
         try(var assets=new ImageAssetService(work)) {
-            assertTrue(assertThrows(IllegalArgumentException.class,()->assets.sample(file,limits,request(4,1))).getMessage().contains("max-pixel-visits"));
+            assertTrue(assertThrows(IllegalArgumentException.class,()->assets.loadRaw(file,limits,request(4,1))).getMessage().contains("max-pixel-visits"));
             assertEquals(0,assets.stats().decodes());
         }
         var points=new ImageAssetService.PreprocessLimits(100000,10000,100000,10000,10,1,1,10000);
         try(var assets=new ImageAssetService(points)) {
-            assertTrue(assertThrows(IllegalArgumentException.class,()->assets.sample(file,limits,request(4,1))).getMessage().contains("max-cached-points"));
+            assertTrue(assertThrows(IllegalArgumentException.class,()->assets.loadRaw(file,limits,request(4,1))).getMessage().contains("max-cached-points"));
         }
     }
 }

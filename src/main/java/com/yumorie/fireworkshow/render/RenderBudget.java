@@ -6,6 +6,11 @@ public final class RenderBudget {
     private final java.util.List<Accent> accents=new java.util.ArrayList<>();
     public void reset(int max) { remaining=max;capacity=max;pendingCost=0;accents.clear(); }
     public boolean take(int count) { if(count<0) throw new IllegalArgumentException("Negative particle count");if(count>remaining) return false; remaining-=count; return true; }
+    public boolean authorizeFrame(long count,boolean unsafe) {
+        if(count<0) throw new IllegalArgumentException("Negative frame cost");
+        if(count>remaining && !unsafe) return false;
+        remaining=(int)Math.max(0,remaining-count);return true;
+    }
     public void reserve(int count) { remaining=Math.max(0,remaining-count); }
     public int remaining() { return remaining; }
     public void deferAccent(int cost,Runnable emission) {

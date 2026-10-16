@@ -13,7 +13,7 @@ public final class FireworkShow extends JavaPlugin {
     private ShowLoader loader;
     public void reloadShows() throws Exception {
         var next=loader.load(getDataFolder().toPath());manager.replace(next);
-        getLogger().info("Image preprocessing: "+next.preprocessing());
+        logDiagnostics(next);
     }
 
     @Override
@@ -30,11 +30,17 @@ public final class FireworkShow extends JavaPlugin {
             command.setExecutor(commands);command.setTabCompleter(commands);
             getServer().getPluginManager().registerEvents(new FireworkTriggerListener(manager,items,this),this);
             getLogger().info("Loaded "+manager.snapshot().shows().size()+" shows; ParticleLib API available");
-            getLogger().info("Image preprocessing: "+manager.snapshot().preprocessing());
+            logDiagnostics(manager.snapshot());
         } catch(Exception | LinkageError e) {
             getLogger().log(java.util.logging.Level.SEVERE,"FireworkShow startup failed; verify configuration and ParticleLib v0.1-alpha compatibility",e);
             getServer().getPluginManager().disablePlugin(this);
         }
+    }
+
+    private void logDiagnostics(ShowLoader.Snapshot snapshot) {
+        getLogger().info("Raw pixel preprocessing: "+snapshot.preprocessing());
+        snapshot.diagnostics().forEach(getLogger()::warning);
+        if(snapshot.settings().unsafeFullFrame()) getLogger().severe("HIGH RISK: experimental.allow-over-budget-full-frames=true; FULL RAW PIXEL frames may exceed normal budget by orders of magnitude, freeze clients/server or disconnect viewers. Disable after diagnosis.");
     }
 
     @Override

@@ -23,10 +23,10 @@ class ImageTest {
         Path p=png(image);assertEquals(2,service.load(p,limits,4,16,700,1).points().size());
         assertEquals(3,service.load(p,limits,4,0,700,1).points().size());
     }
-    @Test void samplingAndAspectAreStable() throws Exception {
+    @Test void rawPixelsIgnoreOldPointCapAndPreserveAspect() throws Exception {
         var image=new BufferedImage(8,4,BufferedImage.TYPE_INT_ARGB);
         for(int y=0;y<4;y++)for(int x=0;x<8;x++)image.setRGB(x,y,0xffabcdef);
-        Path p=png(image);var a=service.load(p,limits,8,0,5,1);assertEquals(5,a.points().size());assertEquals(a,service.load(p,limits,8,0,5,1));
+        Path p=png(image);var a=service.load(p,limits,8,0,5,1);assertEquals(32,a.points().size());assertEquals(a,service.load(p,limits,8,0,5,1));
         var full=service.load(p,limits,8,0,100,1);assertEquals(7,full.points().stream().mapToDouble(v->v.x()).max().orElseThrow()-full.points().stream().mapToDouble(v->v.x()).min().orElseThrow());
         assertEquals(3,full.points().stream().mapToDouble(v->v.y()).max().orElseThrow()-full.points().stream().mapToDouble(v->v.y()).min().orElseThrow());
         assertThrows(UnsupportedOperationException.class,()->a.points().clear());

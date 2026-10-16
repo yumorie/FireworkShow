@@ -12,7 +12,7 @@ class ConfigTest {
     StepRegistry registry() { var r=new StepRegistry();for(String type:new String[]{"reveal","hold","scatter","custom"})r.register(type,new StepFactory(){public void validate(ConfigurationSection c){}public ShowStep create(ConfigurationSection c,ShowContext context){return p->{};}});return r; }
     void setup() throws Exception {
         Files.createDirectories(root.resolve("images"));Files.createDirectories(root.resolve("shows"));
-        for(String resource:new String[]{"config.yml","images/heart.png","shows/alternate-heart.yml"})try(var in=getClass().getResourceAsStream("/"+resource)){Files.copy(in,root.resolve(resource));}
+        for(String resource:new String[]{"config.yml","images/heart.png","shows/alternate-heart.yml"})try(var in=TestFixtures.open(resource)){Files.copy(in,root.resolve(resource));}
     }
     @Test void snapshotAndCloudCacheSurviveFailedReload() throws Exception {
         setup();var loader=new ShowLoader(registry());var old=loader.load(root);assertEquals(1,old.shows().size());

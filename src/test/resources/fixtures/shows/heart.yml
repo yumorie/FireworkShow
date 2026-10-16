@@ -1,0 +1,43 @@
+id: heart
+display-name: '&dHeart Firework'
+images:
+  heart:
+    file: heart.png
+    width-blocks: 5.0
+    alpha-threshold: 16
+    max-points: 600
+    dust-size: 0.9
+tracks:
+  main:
+    clips:
+      - at-tick: 0
+        type: particlelib
+        duration-ticks: 30
+        effect:
+          class: tornado
+          particle: FLAME
+          period: 2
+          iterations: -1
+          tornadoHeight: 4.0
+          maxTornadoRadius: 2.5
+          circleParticles: 8
+          cloudParticles: 10
+          showCloud: true
+      - at-tick: 30
+        type: reveal
+        image: heart
+        duration-ticks: 40
+        mode: center-out
+        initial-scale: 0.15
+        easing: ease-out-cubic
+      - at-tick: 70
+        type: hold
+        image: heart
+        duration-ticks: 40
+      - at-tick: 110
+        type: scatter
+        image: heart
+        duration-ticks: 50
+        radius-blocks: 4.0
+        easing: ease-in-cubic
+        fade-out: true

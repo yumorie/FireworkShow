@@ -1,0 +1,42 @@
+id: multi-image
+display-name: '&aSequential Heart & Text'
+images:
+  heart:
+    file: heart.png
+    width-blocks: 5
+    max-points: 600
+    dust-size: 0.9
+  text:
+    file: text.png
+    width-blocks: 9.5
+    max-points: 600
+    dust-size: 0.8
+tracks:
+  main:
+    clips:
+      - at-tick: 0
+        type: reveal
+        image: heart
+        duration-ticks: 40
+        easing: ease-out-cubic
+      - at-tick: 40
+        type: hold
+        image: heart
+        duration-ticks: 40
+      - at-tick: 80
+        type: scatter
+        image: heart
+        duration-ticks: 40
+      - at-tick: 120
+        type: reveal
+        image: text
+        duration-ticks: 40
+        easing: ease-out-cubic
+      - at-tick: 160
+        type: hold
+        image: text
+        duration-ticks: 40
+      - at-tick: 200
+        type: scatter
+        image: text
+        duration-ticks: 40

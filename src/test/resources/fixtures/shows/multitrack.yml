@@ -1,0 +1,115 @@
+id: multitrack
+display-name: '&bHeart & Text Show'
+orientation: face-trigger
+yaw: 0
+images:
+  heart:
+    file: heart.png
+    width-blocks: 4
+    max-points: 300
+    alpha-threshold: 16
+    dust-size: 0.9
+  text:
+    file: text.png
+    width-blocks: 8
+    max-points: 600
+    alpha-threshold: 16
+    dust-size: 0.8
+  logo:
+    file: mczjulogo.png
+    width-blocks: 10.0
+    max-points: 350
+    particle-spacing: 0.12
+    alpha-threshold: 16
+    dust-size: 0.9
+    brightness: 1.0
+    glow:
+      enabled: false
+      density: 0.03
+tracks:
+  tornado:
+    transform:
+      position: {x: 0, y: -2, z: 0}
+    clips:
+      - at-tick: 0
+        duration-ticks: 40
+        type: particlelib
+        rotation-policy: origin-only
+        effect:
+          class: tornado
+          particle: FLAME
+          period: 2
+          iterations: -1
+          tornadoHeight: 4.0
+          maxTornadoRadius: 2.5
+          circleParticles: 8
+          cloudParticles: 10
+          showCloud: true
+  heart:
+    transform:
+      position: {x: -3, y: 1, z: 0}
+      rotation: {x: 0, y: 0, z: 8}
+    clips:
+      - at-tick: 10
+        duration-ticks: 40
+        type: reveal
+        image: heart
+        easing: ease-out-cubic
+      - at-tick: 50
+        duration-ticks: 60
+        type: hold
+        image: heart
+      - at-tick: 110
+        duration-ticks: 50
+        type: scatter
+        image: heart
+        radius-blocks: 4
+        easing: ease-in-cubic
+  text:
+    transform:
+      position: {x: 4.5, y: 2.5, z: 0}
+      rotation: {x: 0, y: 0, z: -8}
+    clips:
+      - at-tick: 20
+        duration-ticks: 50
+        type: reveal
+        image: text
+        transform:
+          position: {x: 0, y: 0, z: 0.5}
+        easing: ease-out-cubic
+      - at-tick: 70
+        duration-ticks: 60
+        type: hold
+        image: text
+        transform:
+          position: {x: 0, y: 0, z: 0.5}
+      - at-tick: 130
+        duration-ticks: 50
+        type: scatter
+        image: text
+        transform:
+          position: {x: 0, y: 0, z: 0.5}
+        radius-blocks: 3
+        easing: ease-in-cubic
+
+  logo:
+    transform:
+      position: {x: 0, y: 7.6, z: 0}
+      rotation: {x: 0, y: 0, z: 0}
+      scale: 0.75
+    clips:
+      - at-tick: 40
+        duration-ticks: 40
+        type: reveal
+        image: logo
+        easing: ease-out-cubic
+      - at-tick: 80
+        duration-ticks: 60
+        type: hold
+        image: logo
+      - at-tick: 140
+        duration-ticks: 40
+        type: scatter
+        image: logo
+        radius-blocks: 3.0
+        fade-out: true

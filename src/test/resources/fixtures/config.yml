@@ -1,0 +1,28 @@
+experimental:
+  allow-over-budget-full-frames: true
+display:
+  frame-period-ticks: 2
+  view-distance-blocks: 48
+  max-particles-per-tick: 1500
+  max-active-shows: 6
+  max-shows-per-player: 2
+  max-active-clips: 128
+image:
+  max-file-bytes: 16777216
+  max-width: 4096
+  max-height: 4096
+  max-pixels: 4194304
+  max-decoded-bytes: 67108864
+  max-decoded-pixels: 67108864
+  max-pixel-visits: 134217728
+  max-grid-cells: 262144
+  max-sampling-variants: 512
+  max-cached-points: 2000000
+  max-sources: 128
+  max-preprocess-millis: 10000
+  max-points: 700
+  default-alpha-threshold: 16
+  default-dust-size: 0.9
+preview:
+  distance-blocks: 8.0
+  height-offset-blocks: 1.0

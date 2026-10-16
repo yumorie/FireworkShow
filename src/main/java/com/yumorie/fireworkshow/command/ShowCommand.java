@@ -47,7 +47,7 @@ public final class ShowCommand implements CommandExecutor,TabCompleter {
                     shows.stop(player.getUniqueId());sender.sendMessage("已停止本人全部预览");
                 }
                 case "stopall" -> { shows.stop(null);sender.sendMessage("已停止全部演出"); }
-                case "info" -> sender.sendMessage("FireworkShow "+plugin.getPluginMeta().getVersion()+" | ParticleLib API ready | active="+shows.active()+" | cached clouds="+shows.snapshot().cachedClouds()+" | shows="+shows.snapshot().shows().size());
+                case "info" -> sender.sendMessage("FireworkShow "+plugin.getPluginMeta().getVersion()+" | RAW PIXELS unsafeFullFrame="+shows.snapshot().settings().unsafeFullFrame()+" | ParticleLib API ready | active="+shows.active()+" | cached clouds="+shows.snapshot().cachedClouds()+" | shows="+shows.snapshot().shows().size());
                 default -> throw new IllegalArgumentException("未知子命令；使用 /fws help");
             }
         } catch(Exception e) { sender.sendMessage("FireworkShow: "+e.getMessage());if(sub.equals("reload")) plugin.getLogger().warning(e.getMessage()); }

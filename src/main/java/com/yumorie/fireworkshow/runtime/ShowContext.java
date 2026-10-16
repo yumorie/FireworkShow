@@ -17,7 +17,12 @@ public final class ShowContext {
     public final String imageName;
     public final ImageDefinition image;
     public final SpatialContext spatial;
-    private final Map<Integer,double[]> directions=new HashMap<>();
+    public java.util.function.Consumer<String> diagnostics=message->java.util.logging.Logger.getLogger("FireworkShow").warning(message);
+    private boolean frameReported;
+    public void reportFrame(long cost) {
+        if(frameReported) return;frameReported=true;
+        diagnostics.accept("RAW PIXEL frame: show="+definition.id()+" image="+imageName+" cloud="+image.cloud().points().size()+" required="+cost+" remaining="+budget.remaining()+" configuredBudget="+settings.budget()+" sufficient="+(cost<=budget.remaining())+" unsafeFullFrame="+settings.unsafeFullFrame());
+    }
     public final Set<Integer> glowPoints;
     public int tick;
     public int reservedParticles;
@@ -33,10 +38,9 @@ public final class ShowContext {
         this.definition=definition; this.settings=settings; this.origin=origin.clone(); this.owner=owner;this.budget=budget;this.adapter=adapter;
         this.imageName=imageName;this.image=sampledImage;this.spatial=spatial;
         this.seed=seed;
-        if(image!=null) for(var point:image.cloud().points()) directions.put(point.index(),com.yumorie.fireworkshow.step.Animation.direction(seed,point.index()));
         glowPoints=image==null?Set.of():image.glow().select(image.cloud());
     }
-    public double[] direction(int index) { return directions.get(index).clone(); }
+    public double[] direction(int index) { return com.yumorie.fireworkshow.step.Animation.direction(seed,index); }
     public Location origin() { var p=spatial.apply(Vec3.ZERO);return new Location(origin.getWorld(),p.x(),p.y(),p.z(),origin.getYaw(),0); }
     public Location imageLocation(double x,double y,double z) { var p=spatial.imagePoint(x,y,z);return new Location(origin.getWorld(),p.x(),p.y(),p.z()); }
     public List<Player> viewers() {

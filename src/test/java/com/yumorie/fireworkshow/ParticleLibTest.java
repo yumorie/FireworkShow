@@ -24,7 +24,7 @@ class ParticleLibTest {
     }
     @Test void actualTornadoBuilderAcceptsBundledShowAndNestedEffect() throws Exception {
         Files.createDirectories(root.resolve("images"));Files.createDirectories(root.resolve("shows"));
-        for(String name:List.of("config.yml","images/heart.png","shows/heart.yml","shows/alternate-heart.yml"))try(var in=getClass().getResourceAsStream("/"+name)){Files.copy(in,root.resolve(name));}
+        for(String name:List.of("config.yml","images/heart.png","shows/heart.yml","shows/alternate-heart.yml"))try(var in=TestFixtures.open(name)){Files.copy(in,root.resolve(name));}
         var registry=StepRegistry.defaults(adapter());
         var loaded=new ShowLoader(registry).load(root);
         assertEquals(2,loaded.shows().size());

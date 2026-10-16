@@ -66,4 +66,26 @@ class GlowRenderingTest {
     @Test void resettingBudgetDiscardsDeferredLocations() {
         var budget=new RenderBudget();budget.reset(10);budget.deferAccent(1,()->fail("stale accent"));budget.reset(10);budget.flushAccents();assertEquals(10,budget.remaining());
     }
+    @Test void insufficientBudgetRejectsWholeFrameWithoutEmittingAnyPrefix() {
+        var emitted=new ArrayList<Particle>();var budget=new RenderBudget();budget.reset(199);
+        var context=context(false,budget,emitted);
+        var error=assertThrows(IllegalStateException.class,()->new PointCloudRenderer().render(context,"hold",1,1,0,false));
+        assertTrue(error.getMessage().contains("ZERO pixels"));assertTrue(emitted.isEmpty());assertEquals(199,budget.remaining());
+    }
+    @Test void explicitUnsafeSwitchAllowsCompleteFrameAndDefaultsOff() {
+        var emitted=new ArrayList<Particle>();var budget=new RenderBudget();budget.reset(1);
+        var original=context(false,budget,emitted);assertFalse(original.settings.unsafeFullFrame());
+        var yaml=new YamlConfiguration();yaml.set("experimental.allow-over-budget-full-frames",true);
+        var context=new ShowContext(original.definition,Settings.load(yaml),original.origin(),null,budget,null,"test",original.spatial,42);
+        new PointCloudRenderer().render(context,"hold",1,1,0,false);
+        assertEquals(200,emitted.size());assertEquals(0,budget.remaining());
+        yaml.set("experimental.allow-over-budget-full-frames","true");assertThrows(IllegalArgumentException.class,()->Settings.load(yaml));
+    }
+    @Test void semiTransparentRawPixelsAreNotRandomlyOmitted() {
+        var emitted=new ArrayList<Particle>();var budget=new RenderBudget();budget.reset(200);
+        var original=context(false,budget,emitted);
+        var image=new ImageDefinition(new ImagePointCloud(original.image.cloud().points().stream().map(p->new ImagePointCloud.Point(p.x(),p.y(),p.rgb(),16,p.index())).toList()),.9f,Path.of("not-read.png"),original.image.sampling(),GlowDefinition.OFF);
+        var context=new ShowContext(original.definition,original.settings,original.origin(),null,budget,null,"test",original.spatial,42,image);
+        new PointCloudRenderer().render(context,"hold",1,1,0,false);assertEquals(200,emitted.size());
+    }
 }

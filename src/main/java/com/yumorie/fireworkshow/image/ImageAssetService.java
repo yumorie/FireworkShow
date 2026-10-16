@@ -9,14 +9,14 @@ import java.util.*;
 public final class ImageAssetService implements AutoCloseable {
     public record Limits(long bytes,int width,int height,long pixels) {}
     public record PreprocessLimits(long decodedBytes,long decodedPixels,long pixelVisits,int gridCells,int variants,int points,int sources,int millis) {
-        public static PreprocessLimits defaults() { return new PreprocessLimits(67108864,67108864,134217728,262144,512,200000,128,10000); }
+        public static PreprocessLimits defaults() { return new PreprocessLimits(67108864,67108864,134217728,262144,512,2000000,128,10000); }
     }
     public record Stats(int variants,int points,int sources,int decodes,long decodedPixels,long pixelVisits,long millis,long peakEstimatedDecodeBytes) {}
     private record SourceKey(Path path,Limits limits) {}
-    private record Key(SourceKey source,SamplingRequest request) {}
+    private record Key(SourceKey source,double width,int alpha,double brightness) {}
     private final PreprocessLimits bounds;
     private final SourceImageLoader loader=new SourceImageLoader();
-    private final ImageSampler sampler=new ImageSampler();
+    private final RawPixelCloudBuilder builder=new RawPixelCloudBuilder();
     private final Map<SourceKey,SourceImageLoader.Metadata> metadata=new HashMap<>();
     private final Map<Key,ImagePointCloud> cache=new LinkedHashMap<>();
     private final long started=System.nanoTime();
@@ -43,14 +43,12 @@ public final class ImageAssetService implements AutoCloseable {
         if(metadata.size()>=bounds.sources()) throw new IllegalArgumentException("Image preprocessing exceeded max-sources");
         var result=loader.inspect(key.path(),limits,bounds.decodedBytes());metadata.put(key,result);return result;
     }
-    public ImagePointCloud sample(Path path,Limits limits,SamplingRequest request) throws IOException {
+    public ImagePointCloud loadRaw(Path path,Limits limits,SamplingRequest request) throws IOException {
         checkpoint();var source=new SourceKey(path.toRealPath(),limits);
-        // Canonicalize harmless floating-point products such as 1.5*0.8 versus 1.2.
-        request=request.atScale(Math.rint(request.scale()*1e9)/1e9);
-        var key=new Key(source,request);var existing=cache.get(key);if(existing!=null) return existing;
-        if(cache.size()>=bounds.variants()) throw new IllegalArgumentException("Image preprocessing exceeded max-sampling-variants");
-        var info=metadata(source.path(),limits);var grid=sampler.grid(info.width(),info.height(),request,bounds.gridCells());
-        long work=(info.width()+2L*grid.columns())*(info.height()+2L*grid.rows());
+        var key=new Key(source,request.width(),request.alpha(),request.brightness());var existing=cache.get(key);if(existing!=null) return existing;
+        if(cache.size()>=bounds.variants()) throw new IllegalArgumentException("Image preprocessing exceeded max-sampling-variants (raw cloud entries)");
+        var info=metadata(source.path(),limits);
+        long work=info.pixels()*2;
         if(work>bounds.pixelVisits()-pixelVisits) throw new IllegalArgumentException("Image preprocessing exceeded max-pixel-visits");
         pixelVisits+=work;
         if(!source.equals(decodedKey)) {
@@ -59,13 +57,13 @@ public final class ImageAssetService implements AutoCloseable {
             decoded=loader.decode(source.path(),limits,bounds.decodedBytes(),info);decodedKey=source;
             peakDecodeBytes=Math.max(peakDecodeBytes,info.pixels()*8);
         }
-        var cloud=sampler.sample(decoded,request,grid,this::checkpoint);
+        var cloud=builder.build(decoded,request.width(),request.alpha(),request.brightness(),bounds.points()-cachedPoints,this::checkpoint);
         if(cloud.points().size()>bounds.points()-cachedPoints) throw new IllegalArgumentException("Image preprocessing exceeded max-cached-points");
         cachedPoints+=cloud.points().size();cache.put(key,cloud);checkpoint();return cloud;
     }
-    /** Standalone sampling operation for tools/tests, with the same safe loader and sampler. */
+    /** Standalone raw-pixel operation for tools/tests, with the same safe loader and sampler. */
     public ImagePointCloud load(Path path,Limits limits,double width,int threshold,int max,double spacing) throws IOException {
-        try(var scope=new ImageAssetService(bounds)) { return scope.sample(path,limits,new SamplingRequest(width,1,spacing,threshold,max,1)); }
+        try(var scope=new ImageAssetService(bounds)) { return scope.loadRaw(path,limits,new SamplingRequest(width,1,spacing,threshold,max,1)); }
     }
     public Stats stats() { return new Stats(cache.size(),cachedPoints,metadata.size(),loader.decodes(),decodedPixels,pixelVisits,(System.nanoTime()-started)/1000000,peakDecodeBytes); }
     public boolean retainsDecodedImage() { return decoded!=null; }
