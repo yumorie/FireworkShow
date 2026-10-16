@@ -17,8 +17,12 @@ class MultiImageConfigTest {
     ShowLoader loader() { return new ShowLoader(StepRegistry.defaults(new ParticleLibTest().adapter())); }
     void setup(String... shows) throws Exception {
         Files.createDirectories(root.resolve("images"));Files.createDirectories(root.resolve("shows"));
-        for(String name:List.of("config.yml","images/heart.png","images/text.png"))try(var in=getClass().getResourceAsStream("/"+name)){Files.copy(in,root.resolve(name));}
-        for(String show:shows)try(var in=getClass().getResourceAsStream("/shows/"+show+".yml")){Files.copy(in,root.resolve("shows/"+show+".yml"));}
+        for(String name:List.of("config.yml","images/heart.png","images/text.png","images/mczjulogo.png"))try(var in=getClass().getResourceAsStream("/"+name)){Files.copy(in,root.resolve(name));}
+        for(String show:shows)try(var in=getClass().getResourceAsStream("/shows/"+show+".yml")){
+            Path file=root.resolve("shows/"+show+".yml");Files.copy(in,file);
+            // Keep mutation fixtures independent of documentation lines; bundled-comment parsing has its own integration test.
+            Files.writeString(file,String.join("\n",Files.readAllLines(file).stream().filter(line->!line.stripLeading().startsWith("#")).toList())+"\n");
+        }
     }
     @Test void namedImagesAndTracksLoadTogether() throws Exception {
         setup("heart","alternate-heart","multi-image","multitrack");
@@ -26,7 +30,7 @@ class MultiImageConfigTest {
         var heart=snapshot.shows().get("heart");assertEquals(1,heart.tracks().size());
         assertEquals(List.of(0,30,70,110),heart.tracks().getFirst().clips().stream().map(ShowDefinition.ClipDefinition::atTick).toList());
         var sequential=snapshot.shows().get("multi-image");assertEquals(List.of("heart","heart","heart","text","text","text"),sequential.tracks().getFirst().clips().stream().map(ShowDefinition.ClipDefinition::image).toList());
-        var multi=snapshot.shows().get("multitrack");assertEquals(3,multi.tracks().size());assertEquals("text",multi.tracks().get(2).clips().getFirst().image());
+        var multi=snapshot.shows().get("multitrack");assertEquals(4,multi.tracks().size());assertEquals("text",multi.tracks().get(2).clips().getFirst().image());
         assertNotEquals(multi.images().get("heart").cloud(),multi.images().get("text").cloud());
         assertThrows(UnsupportedOperationException.class,()->multi.images().clear());
     }
@@ -114,10 +118,12 @@ class MultiImageConfigTest {
                 .replace("  main:\n    clips:","  main:\n    transform: {scale: 2}\n    clips:")
                 .replace("        type: reveal","        transform: {position: {y: 1}, scale: 0.5}\n        type: reveal");
         Files.writeString(root.resolve("shows/scaled.yml"),yaml);
-        var snapshot=loader().load(root);assertEquals(2,snapshot.cachedClouds());
+        var snapshot=loader().load(root);assertEquals(4,snapshot.cachedClouds());
         var original=snapshot.shows().get("multi-image");var scaled=snapshot.shows().get("scaled");
         assertSame(original.images().get("heart").cloud(),scaled.images().get("heart").cloud());
         assertSame(original.images().get("text").cloud(),scaled.images().get("text").cloud());
+        assertSame(original.tracks().getFirst().clips().getFirst().sampledImage().cloud(),scaled.tracks().getFirst().clips().getFirst().sampledImage().cloud());
+        assertNotSame(scaled.tracks().getFirst().clips().getFirst().sampledImage().cloud(),scaled.tracks().getFirst().clips().get(1).sampledImage().cloud());
         var track=scaled.tracks().getFirst();var clip=track.clips().getFirst();
         assertEquals(2,track.transform().scale());assertEquals(0.5,clip.transform().scale());
         var space=SpatialContext.at(Vec3.ZERO,0,Rotation3D.ZERO).child(track.transform()).child(clip.transform());

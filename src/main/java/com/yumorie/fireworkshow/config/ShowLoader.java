@@ -13,8 +13,9 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
 import static com.yumorie.fireworkshow.config.Values.*;
 
 public final class ShowLoader {
-    public record Snapshot(Settings settings,Map<String,ShowDefinition> shows,int cachedClouds) {
+    public record Snapshot(Settings settings,Map<String,ShowDefinition> shows,ImageAssetService.Stats preprocessing) {
         public Snapshot { shows=Map.copyOf(shows); }
+        public int cachedClouds() { return preprocessing.variants(); }
     }
     private final StepRegistry steps;
     public ShowLoader(StepRegistry steps) { this.steps=steps; }
@@ -23,9 +24,8 @@ public final class ShowLoader {
         var config=loadYaml(root.resolve("config.yml"));
         var settings=Settings.load(config);
         Map<String,ShowDefinition> shows=new LinkedHashMap<>();
-        Map<String,ImagePointCloud> cache=new HashMap<>();
         List<String> errors=new ArrayList<>();
-        try(var files=Files.list(root.resolve("shows"))) {
+        try(var assets=new ImageAssetService(settings.preprocess());var files=Files.list(root.resolve("shows"))) {
             for(var file:files.filter(p->p.getFileName().toString().endsWith(".yml")).sorted().limit(129).toList()) {
                 if(shows.size()>=128) { errors.add("shows/: maximum 128 definitions");break; }
                 try {
@@ -35,14 +35,14 @@ public final class ShowLoader {
                     String id=yaml.getString("id","");
                     if(!id.matches("[a-z0-9_-]{1,64}")) throw new IllegalArgumentException("id: invalid identifier");
                     if(shows.containsKey(id)) throw new IllegalArgumentException("id: duplicate "+id);
-                    shows.put(id,definition(root,yaml,settings,cache,id));
+                    shows.put(id,definition(root,yaml,settings,assets,id));
                 } catch(Exception error) { errors.add(file.getFileName()+": "+error.getMessage()); }
             }
-        }
         if(!errors.isEmpty()) throw new IllegalArgumentException("Reload rejected ("+errors.size()+" errors); old snapshot retained:\n"+String.join("\n",errors));
-        return new Snapshot(settings,shows,cache.size());
+        return new Snapshot(settings,shows,assets.stats());
+        }
     }
-    private ShowDefinition definition(Path root,YamlConfiguration yaml,Settings settings,Map<String,ImagePointCloud> cache,String id) throws Exception {
+    private ShowDefinition definition(Path root,YamlConfiguration yaml,Settings settings,ImageAssetService assets,String id) throws Exception {
         Map<String,ImageDefinition> images=new LinkedHashMap<>();
         for(String key:yaml.getKeys(false)) if(!Set.of("id","display-name","images","orientation","yaw","tracks").contains(key))
             throw new IllegalArgumentException(key+": unknown show field");
@@ -50,7 +50,7 @@ public final class ShowLoader {
         if(table.getKeys(false).size()>16) throw new IllegalArgumentException("images: maximum 16 named resources");
         for(String name:table.getKeys(false)) {
             if(!name.matches("[a-z0-9_-]{1,64}")) throw new IllegalArgumentException("images: invalid name "+name);
-            try { images.put(name,image(root,requiredSection(table,name),settings,cache)); }
+            try { images.put(name,image(root,requiredSection(table,name),settings,assets)); }
             catch(Exception error) { throw new IllegalArgumentException("images."+name+": "+error.getMessage(),error); }
         }
         String orientation=yaml.getString("orientation","face-trigger");
@@ -64,9 +64,10 @@ public final class ShowLoader {
             if(!name.matches("[a-z0-9_-]{1,64}")) throw new IllegalArgumentException("tracks: invalid name "+name);
             var track=requiredSection(trackTable,name);
             for(String key:track.getKeys(false)) if(!Set.of("transform","clips").contains(key)) throw new IllegalArgumentException("tracks."+name+"."+key+": unknown field");
-            var clips=clips(maps(track,"clips",1,64),images,"tracks."+name+".clips");
+            var transform=SpatialConfig.read(track);
+            var clips=clips(maps(track,"clips",1,64),images,"tracks."+name+".clips",transform,assets,settings);
             total+=clips.size();if(total>128) throw new IllegalArgumentException("tracks: maximum 128 clips per show");
-            tracks.add(new ShowDefinition.TrackDefinition(name,SpatialConfig.read(track),clips));
+            tracks.add(new ShowDefinition.TrackDefinition(name,transform,clips));
         }
         for(var track:tracks) for(var clip:track.clips()) {
             var config=new YamlConfiguration();config.loadFromString(clip.step().yaml());
@@ -75,7 +76,7 @@ public final class ShowLoader {
         }
         return new ShowDefinition(id,yaml.getString("display-name",id),images,orientation,yaw,tracks);
     }
-    private List<ShowDefinition.ClipDefinition> clips(List<Map<?,?>> list,Map<String,ImageDefinition> images,String path) {
+    private List<ShowDefinition.ClipDefinition> clips(List<Map<?,?>> list,Map<String,ImageDefinition> images,String path,Transform3D track,ImageAssetService assets,Settings settings) {
         List<ShowDefinition.ClipDefinition> result=new ArrayList<>();
         for(int index=0;index<list.size();index++) {
             var step=section(list.get(index));String type=step.getString("type","");
@@ -90,21 +91,25 @@ public final class ShowLoader {
                 if(factory.usesImage() && image==null) throw new IllegalArgumentException("image: explicit named resource required");
                 String policy=step.getString("rotation-policy","origin-only");
                 if(!Set.of("origin-only","require-full").contains(policy)) throw new IllegalArgumentException("rotation-policy: expected origin-only or require-full");
-                result.add(new ShowDefinition.ClipDefinition(at,new ShowDefinition.StepDefinition(type,duration,step.saveToString()),image,SpatialConfig.read(step),policy));
+                var transform=SpatialConfig.read(step);
+                var sampled=image==null?null:images.get(image).atScale(assets,settings.imageLimits(),track.child(transform).scale());
+                result.add(new ShowDefinition.ClipDefinition(at,new ShowDefinition.StepDefinition(type,duration,step.saveToString()),image,transform,policy,sampled));
             } catch(Exception error) { throw new IllegalArgumentException(path+"["+index+"]: "+error.getMessage(),error); }
         }
         return List.copyOf(result);
     }
-    private ImageDefinition image(Path root,ConfigurationSection image,Settings settings,Map<String,ImagePointCloud> cache) throws Exception {
+    private ImageDefinition image(Path root,ConfigurationSection image,Settings settings,ImageAssetService assets) throws Exception {
         Path path=ImageAssetService.resolve(root.resolve("images"),image.getString("file",""));
         double width=number(image,"width-blocks",5,0.1,32);
         int alpha=integer(image,"alpha-threshold",settings.alpha(),0,255);
         int max=integer(image,"max-points",settings.maxPoints(),1,settings.maxPoints());
         float dust=(float)number(image,"dust-size",settings.dust(),0.01,4);
-        String key=path+":"+width+":"+alpha+":"+max;
-        var cloud=cache.get(key);
-        if(cloud==null) { cloud=new ImageAssetService().load(path,settings.imageLimits(),width,alpha,max);cache.put(key,cloud); }
-        return new ImageDefinition(cloud,dust);
+        double spacing=number(image,"particle-spacing",0.12,0.02,2),brightness=number(image,"brightness",1,0.1,3);
+        if(image.contains("glow")&&!image.isConfigurationSection("glow")) throw new IllegalArgumentException("glow: expected mapping");
+        if(image.contains("glow.enabled")&&!image.isBoolean("glow.enabled")) throw new IllegalArgumentException("glow.enabled: expected boolean");
+        var glow=new GlowDefinition(image.getBoolean("glow.enabled",false),number(image,"glow.density",0.03,0,0.1));
+        var request=new SamplingRequest(width,1,spacing,alpha,Math.min(max,settings.budget()),brightness);
+        return new ImageDefinition(assets.sample(path,settings.imageLimits(),request),dust,path,request,glow);
     }
     private static ConfigurationSection requiredSection(ConfigurationSection parent,String key) {
         var section=parent.getConfigurationSection(key);

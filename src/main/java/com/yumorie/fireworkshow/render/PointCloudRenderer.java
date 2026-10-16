@@ -12,6 +12,8 @@ public final class PointCloudRenderer {
         var points=c.image.cloud().points();
         double scale=mode.equals("reveal")?Animation.revealScale(initialScale,progress):1;
         int count=mode.equals("reveal")?(int)Math.ceil(points.size()*progress):points.size();
+        // Accents are emitted only after all affordable colored points, so they never displace the logo.
+        var accents=new java.util.ArrayList<org.bukkit.Location>();
         for(int i=0;i<count;i++) {
             var p=points.get(i);
             if(!Animation.visible(0,p.index(),1-p.alpha()/255.0)) continue;
@@ -22,6 +24,12 @@ public final class PointCloudRenderer {
             var location=c.imageLocation(x,y,z);
             var dust=new Particle.DustOptions(Color.fromRGB(p.rgb()),c.image.dust());
             for(var player:viewers) player.spawnParticle(Particle.DUST,location,1,0,0,0,0,dust,true);
+            if(c.glowPoints.contains(p.index())) accents.add(location);
+        }
+        for(var location:accents) {
+            c.budget.deferAccent(viewers.size(),()-> {
+                for(var player:viewers) player.spawnParticle(Particle.GLOW,location,1,0,0,0,0,null,true);
+            });
         }
     }
 }

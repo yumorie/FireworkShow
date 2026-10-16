@@ -11,14 +11,15 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class FireworkShow extends JavaPlugin {
     private ShowManager manager;
     private ShowLoader loader;
-    public void reloadShows() throws Exception { manager.replace(loader.load(getDataFolder().toPath())); }
+    public void reloadShows() throws Exception {
+        var next=loader.load(getDataFolder().toPath());manager.replace(next);
+        getLogger().info("Image preprocessing: "+next.preprocessing());
+    }
 
     @Override
     public void onEnable() {
         try {
-            saveDefaultConfig();
-            for(String resource:new String[]{"shows/heart.yml","shows/alternate-heart.yml","shows/multitrack.yml","shows/multi-image.yml","images/heart.png","images/text.png"})
-                if(!new java.io.File(getDataFolder(),resource).exists()) saveResource(resource,false);
+            com.yumorie.fireworkshow.config.BundledResources.install(getDataFolder().toPath());
             var adapter=new ParticleLibAdapter();
             var steps=StepRegistry.defaults(adapter);
             loader=new ShowLoader(steps);
@@ -29,6 +30,7 @@ public final class FireworkShow extends JavaPlugin {
             command.setExecutor(commands);command.setTabCompleter(commands);
             getServer().getPluginManager().registerEvents(new FireworkTriggerListener(manager,items,this),this);
             getLogger().info("Loaded "+manager.snapshot().shows().size()+" shows; ParticleLib API available");
+            getLogger().info("Image preprocessing: "+manager.snapshot().preprocessing());
         } catch(Exception | LinkageError e) {
             getLogger().log(java.util.logging.Level.SEVERE,"FireworkShow startup failed; verify configuration and ParticleLib v0.1-alpha compatibility",e);
             getServer().getPluginManager().disablePlugin(this);

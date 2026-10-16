@@ -1,43 +1,88 @@
+# UTF-8 中文配置。游戏 tick 按服务器时钟计算；20 TPS 时 20 tick 约为 1 秒。
+# 图片按最终世界尺寸采样：width-blocks × 累计 scale；旋转不改变采样密度。所有轨道共用预算。
+# 字符串，必填且唯一；1～64 个小写字母、数字、下划线或短横线，无单位。
 id: heart
+# 字符串，默认使用 id；物品显示名称，支持 & 颜色代码，无单位。
 display-name: '&dHeart Firework'
+# 命名图片资源表（映射，必填，最多 16 项）；下方名称由 Clip.image 引用，不是文件名。
 images:
+  # 命名图片资源 'heart'（映射，无默认名，最多 16 项）；由 Clip.image 使用同名字符串引用。
   heart:
+    # 字符串，必填；images/ 下的简单 PNG 文件名；拒绝 URL、路径穿越和越界符号链接。
     file: heart.png
+    # 有限数值，默认 5，范围 0.1～32，单位方块；最终采样宽度 = 此值 × Track.scale × Clip.scale。
     width-blocks: 5.0
+    # 整数，默认 16，范围 0～255；过滤贡献墨迹的低 alpha，完全透明区域始终没有粒子。
     alpha-threshold: 16
+    # 整数，默认全局 image.max-points（700），范围 1～该全局值；再与发送预算取较小值，实际点数还取决于有效尺寸和内容。
     max-points: 600
+    # 有限数值，默认全局 default-dust-size（0.9），范围 0.01～4；DUST 大小参数，不随空间 scale 自动改变。
     dust-size: 0.9
+# 命名轨道表（映射，必填，1～16 项）；轨道并行，同轨 Clip 也可重叠，所有轨道共用预算。
 tracks:
+  # 命名轨道 'main'（映射，无默认名，最多 16 项）；与其他轨道并行，同轨片段也可重叠。
   main:
+    # 片段列表（必填，1～64 项/轨，最多 128 项/Show）；独立起止，时间区间可重叠，共用父 Track 变换。
     clips:
+      # 整数，必填，范围 0～23999，单位游戏 tick（20 TPS 时每秒 20 tick）；相对整场开始时间，不相对前一 Clip。
       - at-tick: 0
+        # 字符串，必填；reveal（形成）、hold（保持）、scatter（扩散）或 particlelib（库效果），需在 StepRegistry 注册。
         type: particlelib
+        # 正整数，必填，范围 1～12000，单位游戏 tick；at-tick + duration-ticks 不得超过 24000。
         duration-ticks: 30
+        # 映射，particlelib 阶段必填；真实 ParticleLib 参数，由独立插件播放，结束/取消会清理自己的句柄。
         effect:
+          # 字符串，必填且必须是库已注册效果；此例 tornado 为真实龙卷风，不是 Java 类名。
           class: tornado
+          # 字符串，tornado 默认 FLAME；必须是 Paper Particle 枚举名，无单位，不控制真实光照。
           particle: FLAME
+          # 整数，tornado 默认 5，本例 2，允许 1～200，单位游戏 tick；库效果发射周期。
           period: 2
+          # 整数，tornado 默认 20，允许 -1～10000；-1 持续运行，由 Clip 时长结束时主动取消。
           iterations: -1
+          # 有限数值，本适配器默认 4，范围 0.1～16，单位方块；库内部龙卷风高度，不由 transform.scale 改变。
           tornadoHeight: 4.0
+          # 有限数值，本适配器默认 2.5，范围 0～8，单位方块；库内部最大半径，不由 transform.scale 改变。
           maxTornadoRadius: 2.5
+          # 整数，本适配器默认 8，范围 1～32；每圈密度系数，影响库粒子预算估算。
           circleParticles: 8
+          # 整数，本适配器默认 10，范围 0～50；云层数量系数，实际数量还乘库 cloudSize。
           cloudParticles: 10
+          # 布尔值，库默认 true；是否绘制龙卷风云层。
           showCloud: true
+      # 整数，必填，范围 0～23999，单位游戏 tick（20 TPS 时每秒 20 tick）；相对整场开始时间，不相对前一 Clip。
       - at-tick: 30
+        # 字符串，必填；reveal（形成）、hold（保持）、scatter（扩散）或 particlelib（库效果），需在 StepRegistry 注册。
         type: reveal
+        # 字符串，图片阶段必填；精确引用 images 中的资源名称，同一尺寸的形成/保持/扩散复用同一采样点云。
         image: heart
+        # 正整数，必填，范围 1～12000，单位游戏 tick；at-tick + duration-ticks 不得超过 24000。
         duration-ticks: 40
+        # 字符串，默认且仅支持 center-out；按到中心的距离和稳定索引，从中心向外形成。
         mode: center-out
+        # 有限数值，默认 0.15，范围 0～1；reveal 起始局部缩放，逐渐回到目标位置，不在每帧重新采样 PNG。
         initial-scale: 0.15
+        # 字符串，默认 linear；支持 linear、ease-in-cubic、ease-out-cubic，控制动画进度曲线。
         easing: ease-out-cubic
+      # 整数，必填，范围 0～23999，单位游戏 tick（20 TPS 时每秒 20 tick）；相对整场开始时间，不相对前一 Clip。
       - at-tick: 70
+        # 字符串，必填；reveal（形成）、hold（保持）、scatter（扩散）或 particlelib（库效果），需在 StepRegistry 注册。
         type: hold
+        # 字符串，图片阶段必填；精确引用 images 中的资源名称，同一尺寸的形成/保持/扩散复用同一采样点云。
         image: heart
+        # 正整数，必填，范围 1～12000，单位游戏 tick；at-tick + duration-ticks 不得超过 24000。
         duration-ticks: 40
+      # 整数，必填，范围 0～23999，单位游戏 tick（20 TPS 时每秒 20 tick）；相对整场开始时间，不相对前一 Clip。
       - at-tick: 110
+        # 字符串，必填；reveal（形成）、hold（保持）、scatter（扩散）或 particlelib（库效果），需在 StepRegistry 注册。
         type: scatter
+        # 字符串，图片阶段必填；精确引用 images 中的资源名称，同一尺寸的形成/保持/扩散复用同一采样点云。
         image: heart
+        # 正整数，必填，范围 1～12000，单位游戏 tick；at-tick + duration-ticks 不得超过 24000。
         duration-ticks: 50
+        # 有限数值，默认 4，范围 0～32，单位本地图像坐标中的方块；scatter 固定方向位移，再经过父级变换。
         radius-blocks: 4.0
+        # 字符串，默认 linear；支持 linear、ease-in-cubic、ease-out-cubic，控制动画进度曲线。
         easing: ease-in-cubic
+        # 布尔值，默认 true；scatter 按稳定规则降低可见点密度，结束停止发送，不是真实客户端 alpha。
         fade-out: true

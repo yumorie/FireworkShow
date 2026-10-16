@@ -62,7 +62,7 @@ public final class ShowManager {
             var factory=steps.factory(d.type());factory.validateSpatial(c,child);
             if(d.type().equals("particlelib") && child.requestsShapeTransform()) plugin.getLogger().warning("Show "+id+" clip "+track.id()+"/"+index+": ParticleLib ORIGIN_ONLY; position transformed, internal shape rotation/scale is not supported");
             long seed=ShowContext.imageSeed(context.seed,clip.image());
-            var clipContext=new ShowContext(def,settings,origin,owner,budget,adapter,clip.image(),child,seed);
+            var clipContext=new ShowContext(def,settings,origin,owner,budget,adapter,clip.image(),child,seed,clip.sampledImage());
             contexts.add(clipContext);
             clips.add(new TimelineEngine.ScheduledClip(track.id()+"/"+index,clip.atTick(),d.duration(),factory.create(c,clipContext)));
         }
@@ -84,11 +84,12 @@ public final class ShowManager {
             }
             if(s.engine.done()) it.remove();
         }
+        budget.flushAccents();
     }
     public void stop(UUID owner) {
         for(var it=sessions.iterator();it.hasNext();) { var s=it.next();if(owner==null || s.preview && owner.equals(s.context.owner)) {
             try { s.engine.stop(); } catch(RuntimeException e) { plugin.getLogger().log(java.util.logging.Level.SEVERE,"Failed to stop show "+s.context.definition.id(),e); } finally { it.remove(); }
         } }
     }
-    public void close() { try { stop(null); } finally { task.cancel(); } }
+    public void close() { try { stop(null); } finally { budget.reset(0);task.cancel(); } }
 }
